@@ -8,9 +8,11 @@ use Doctrine\ORM\EntityManagerInterface;
 
 class ProjectService
 {
+    /**
+     * @param ProjectProviderInterface $provider
+     */
     public function __construct(
-        private ProjectProviderInterface $provider,
-        private EntityManagerInterface $em
+        private ProjectProviderInterface $provider
     ) {}
 
     /**
@@ -21,9 +23,9 @@ class ProjectService
         if (empty(trim($name))) {
             throw new LogicException('Le nom du projet est obligatoire');
         }
+
         $project = new Project($name, $description);
-        $this->em->persist($project);
-        $this->em->flush();
+        $this->provider->saveProject($project);
         return $project;
     }
 

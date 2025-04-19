@@ -37,6 +37,11 @@ class DoctrineTaskProvider implements TaskProviderInterface
         $this->em->remove($task);
         $this->em->flush();
     }
+
+    /**
+     * @param string $status
+     * @return Task[]
+     */
     public function getTasksByStatus(string $status): array
     {
         return $this->em->getRepository(Task::class)
@@ -46,6 +51,11 @@ class DoctrineTaskProvider implements TaskProviderInterface
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * @param \DateTimeImmutable $dueDate
+     * @return Task[]
+     */
     public function getTasksByDueDate(\DateTimeImmutable $dueDate): array
     {
         return $this->em->getRepository(Task::class)
@@ -55,6 +65,11 @@ class DoctrineTaskProvider implements TaskProviderInterface
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * @param \DateTimeImmutable $createdAt
+     * @return Task[]
+     */
     public function getTasksByCreatedAt(\DateTimeImmutable $createdAt): array
     {
         return $this->em->getRepository(Task::class)
@@ -64,6 +79,11 @@ class DoctrineTaskProvider implements TaskProviderInterface
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * @param string $title
+     * @return Task[]
+     */
     public function getTasksByTitle(string $title): array
     {
         return $this->em->getRepository(Task::class)

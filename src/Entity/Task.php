@@ -36,6 +36,18 @@ class Task
     #[ORM\ManyToOne(inversedBy: 'tasks')]
     private ?Project $project = null;
 
+    public function __construct(string $title, ?string $description = null, string $status = self::STATUS_TODO)
+    {
+        $this->title = $title;
+        $this->description = $description;
+        $this->status = $status;
+        $this->createdAt = new \DateTimeImmutable();
+    }
+    public function __toString(): string
+    {
+        return $this->title;
+    }
+
     public function getId(): ?int
     {
         return $this->id;

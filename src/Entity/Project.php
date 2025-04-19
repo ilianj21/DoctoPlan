@@ -31,8 +31,11 @@ class Project
     #[ORM\OneToMany(targetEntity: Task::class, mappedBy: 'project')]
     private Collection $tasks;
 
-    public function __construct()
+    public function __construct(string $name, ?string $description = null)
     {
+        $this->name = $name;
+        $this->description = $description;
+        $this->createdAt = new \DateTimeImmutable();
         $this->tasks = new ArrayCollection();
     }
 

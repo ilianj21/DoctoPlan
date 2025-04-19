@@ -14,23 +14,23 @@ use DateTimeImmutable;
 class TaskServiceTest extends TestCase
 {
     private TaskProviderInterface $provider;
-    private EntityManagerInterface $em;
     private TaskService $service;
 
     protected function setUp(): void
     {
         $this->provider = $this->createMock(TaskProviderInterface::class);
-
         $this->service = new TaskService($this->provider);
     }
 
     public function testMarkAsDoneSuccess(): void
     {
         $project = new Project('Demo');
-        $task = new Task('T1', $project);
+        $task = new Task('T1');
+        $task->setProject($project);
         $task->setDueDate((new DateTimeImmutable())->modify('+1 day'));
         $task->setStatus(Task::STATUS_IN_PROGRESS);
 
+        /** @phpstan-ignore method.notFound */
         $this->provider->expects($this->once())->method('saveTask')->with($task);
 
         $this->service->markAsDone($task);
@@ -40,7 +40,8 @@ class TaskServiceTest extends TestCase
     public function testMarkAsDoneThrowsWhenAlreadyDone(): void
     {
         $project = new Project('Demo');
-        $task = new Task('T2', $project);
+        $task = new Task('T2');
+        $task->setProject($project);
         $task->setStatus(Task::STATUS_DONE);
 
         $this->expectException(LogicException::class);
@@ -52,7 +53,8 @@ class TaskServiceTest extends TestCase
     public function testMarkAsDoneThrowsWhenExpired(): void
     {
         $project = new Project('Demo');
-        $task = new Task('T3', $project);
+        $task = new Task('T3');
+        $task->setProject($project);
         $task->setDueDate((new DateTimeImmutable())->modify('-10 days'));
 
         $this->expectException(LogicException::class);
@@ -64,15 +66,18 @@ class TaskServiceTest extends TestCase
     public function testGetPrioritizedTasksSorting(): void
     {
         $projectId = 1;
-        $t1 = new Task('A', new Project('P'));
+        $t1 = new Task('A');
+        $t1->setProject(new Project('P'));
         $t1->setDueDate((new DateTimeImmutable())->modify('+3 days'));
         $t1->setStatus(Task::STATUS_TODO);
 
-        $t2 = new Task('B', new Project('P'));
+        $t2 = new Task('B');
+        $t2->setProject(new Project('P'));
         $t2->setDueDate((new DateTimeImmutable())->modify('+1 day'));
         $t2->setStatus(Task::STATUS_IN_PROGRESS);
 
         $stub = [$t1, $t2];
+        /** @phpstan-ignore method.notFound */
         $this->provider->method('getTasksByProject')->with($projectId)->willReturn($stub);
 
         $result = $this->service->getPrioritizedTasks($projectId);

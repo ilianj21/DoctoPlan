@@ -30,19 +30,17 @@ interface TaskProviderInterface
     public function getTaskById(int $taskId): ?Task;
 
     /**
-     * Retourne toutes les tâches par statut
+     * Enregistre une tâche
      *
-     * @param string $status
-     * @return Task[]
+     * @param Task $task
      */
     public function saveTask(Task $task): void;
 
     /**
-     * Retourne toutes les tâches par dueDate
+     * Supprime une tâche
      *
-     * @param \DateTimeImmutable $dueDate
-     * @return Task[]
-     */   
+     * @param Task $task
+     */  
     public function deleteTask(Task $task): void;
 
 }
