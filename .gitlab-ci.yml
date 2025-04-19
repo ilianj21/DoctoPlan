@@ -1,0 +1,50 @@
+stages:
+  - analysis
+  - test
+  - deploy
+
+variables:
+  DOCKER_IMAGE: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+
+sonarqube-analysis:
+  image: sonarsource/sonar-scanner-cli:latest
+  stage: analysis
+  script:
+    - sonar-scanner -Dsonar.projectKey=my_symfony_project -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_TOKEN
+  only:
+    - branches
+
+phpstan-analysis:
+  image: php:8.1
+  stage: analysis
+  script:
+    - composer install --prefer-dist --no-progress --no-interaction
+    - vendor/bin/phpstan analyse src --level=7
+  only:
+    - branches
+
+phpunit:
+  image: php:8.1
+  stage: test
+  script:
+    - composer install --prefer-dist --no-progress --no-interaction
+    - vendor/bin/phpunit --coverage-text --colors=never
+  artifacts:
+    reports:
+      junit: junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+build-deploy:
+  image: docker:latest
+  stage: deploy
+  services:
+    - docker:dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $DOCKER_IMAGE .
+    - docker push $DOCKER_IMAGE
+    - docker run -d --name symfony_app -p 80:80 $DOCKER_IMAGE
+  only:
+    - main
