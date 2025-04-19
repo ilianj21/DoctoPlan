@@ -1,50 +1,100 @@
 stages:
   - analysis
   - test
+  - sonarqube
   - deploy
 
 variables:
+  # Docker image tag for deploy
   DOCKER_IMAGE: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+  # Composer cache dir inside project
+  COMPOSER_CACHE_DIR: "$CI_PROJECT_DIR/.cache/composer"
+  # Docker‑in‑Docker settings (disable TLS)
+  DOCKER_HOST: "tcp://docker:2375"
+  DOCKER_TLS_CERTDIR: ""
 
-sonarqube-analysis:
-  image: sonarsource/sonar-scanner-cli:latest
-  stage: analysis
-  script:
-    - sonar-scanner -Dsonar.projectKey=my_symfony_project -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_TOKEN
-  only:
-    - branches
+# share Composer vendor & cache between jobs
+cache:
+  key: "${CI_PROJECT_ID}"
+  paths:
+    - vendor/
+    - .cache/composer/
 
 phpstan-analysis:
-  image: php:8.1
   stage: analysis
+  image: php:8.1-cli
+  before_script:
+    - apt-get update && apt-get install -y git unzip curl
+    - curl -sS https://getcomposer.org/installer \
+        | php -- --install-dir=/usr/local/bin --filename=composer
+    - composer install --prefer-dist --no-interaction --no-progress
   script:
-    - composer install --prefer-dist --no-progress --no-interaction
     - vendor/bin/phpstan analyse src --level=7
   only:
     - branches
 
 phpunit:
-  image: php:8.1
   stage: test
+  image: php:8.1-cli
+  before_script:
+    - apt-get update && apt-get install -y git unzip curl
+    - curl -sS https://getcomposer.org/installer \
+        | php -- --install-dir=/usr/local/bin --filename=composer
+    - composer install --prefer-dist --no-interaction --no-progress
   script:
-    - composer install --prefer-dist --no-progress --no-interaction
-    - vendor/bin/phpunit --coverage-text --colors=never
+    - vendor/bin/phpunit --configuration phpunit.xml --coverage-clover coverage.xml
   artifacts:
-    reports:
-      junit: junit.xml
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage.xml
+    when: always
+    paths:
+      - vendor/
+      - coverage.xml
+
+sonarqube-analysis:
+  stage: sonarqube
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  services:
+    - name: sonarqube:10.6-community
+      alias: sonarqube
+  needs:
+    - job: phpunit
+      artifacts: true
+  variables:
+    SONAR_HOST_URL: "http://sonarqube:9000"
+    SONAR_LOGIN: admin
+    SONAR_PASSWORD: admin
+  before_script:
+    - echo "⏳ Waiting for SonarQube to be ready…"
+    - |
+      until curl -s "${SONAR_HOST_URL}/api/system/health" \
+            | grep -q '"status":"GREEN"'; do
+        sleep 5
+      done
+  script:
+    - sonar-scanner \
+        -Dsonar.projectKey="${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}" \
+        -Dsonar.projectName="${CI_PROJECT_NAME}" \
+        -Dsonar.sources=src \
+        -Dsonar.exclusions="vendor/**,tests/**" \
+        -Dsonar.host.url="${SONAR_HOST_URL}" \
+        -Dsonar.login="${SONAR_LOGIN}" \
+        -Dsonar.password="${SONAR_PASSWORD}" \
+        -Dsonar.qualitygate.wait=true \
+        -Dsonar.php.coverage.reportPaths=coverage.xml
+  only:
+    - merge_requests
+    - main
 
 build-deploy:
-  image: docker:latest
   stage: deploy
+  image: docker:24.0.5
   services:
-    - docker:dind
+    - name: docker:24.0.5-dind
+      alias: docker
   script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build -t $DOCKER_IMAGE .
-    - docker push $DOCKER_IMAGE
-    - docker run -d --name symfony_app -p 80:80 $DOCKER_IMAGE
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker build -t "$DOCKER_IMAGE" .
+    - docker push "$DOCKER_IMAGE"
   only:
     - main
