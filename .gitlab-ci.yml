@@ -29,7 +29,7 @@ phpstan-analysis:
         | php -- --install-dir=/usr/local/bin --filename=composer
     - composer install --prefer-dist --no-interaction --no-progress
   script:
-    - vendor/bin/phpstan analyse src --level=7
+    - php vendor/bin/phpstan analyse -c phpstan.neon
   only:
     - branches
 

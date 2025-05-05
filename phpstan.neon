@@ -1,0 +1,8 @@
+parameters:
+	level: 7
+	paths:
+		- src
+		- tests/Service
+	ignoreErrors:
+		- '#Property App\\Entity\\Task::\$id \(int\|null\) is never assigned int so it can be removed from the property type\.#'
+		- '#Property App\\Entity\\Project::\$id \(int\|null\) is never assigned int so it can be removed from the property type\.#'
