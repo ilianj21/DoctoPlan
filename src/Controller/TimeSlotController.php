@@ -3,14 +3,16 @@
 namespace App\Controller;
 
 use App\Entity\TimeSlot;
-use App\Form\TimeSlotType;
+use App\Entity\User;
 use App\Repository\TimeSlotRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/time/slot')]
 class TimeSlotController extends AbstractController
@@ -105,8 +107,9 @@ class TimeSlotController extends AbstractController
             'form'      => $form,
         ]);
     }
-    
+
     #[Route('/available/{doctor}', name: 'available_slots', methods: ['GET'])]
+    #[IsGranted('ROLE_DOCTOR')] 
     public function available(TimeSlotRepository $repo, User $doctor): JsonResponse
     {
         $slots = $repo->findAvailableSlotsForDoctor($doctor);

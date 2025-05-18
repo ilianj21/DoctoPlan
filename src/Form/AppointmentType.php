@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Form;
 
 use App\Entity\Appointment;
@@ -28,7 +29,7 @@ class AppointmentType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            // --- Patient uniquement ROLE_USER
+            // Patient uniquement ROLE_USER
             ->add('patient', EntityType::class, [
                 'class'         => User::class,
                 'choice_label'  => 'name',
@@ -40,7 +41,7 @@ class AppointmentType extends AbstractType
                       ->orderBy('u.name', 'ASC'),
             ])
 
-            // --- Médecin uniquement ROLE_DOCTOR + auto‐submit
+            // Médecin uniquement ROLE_DOCTOR + auto‐submit au changement
             ->add('doctor', EntityType::class, [
                 'class'         => User::class,
                 'choice_label'  => 'name',
@@ -53,21 +54,22 @@ class AppointmentType extends AbstractType
                       ->orderBy('u.name', 'ASC'),
             ])
 
-            // --- TimeSlot vide au chargement
+            // TimeSlot vide au chargement (rempli par PRE_SUBMIT)
             ->add('timeSlot', EntityType::class, [
                 'class'       => TimeSlot::class,
-                'choices'     => [],   // on remplit via PRE_SUBMIT
+                'choices'     => [],
                 'placeholder' => 'Choisissez un médecin d\'abord',
             ])
 
             ->add('status')
         ;
 
-        // fonction utilitaire pour (re)peupler timeSlot
+        // utilitaire pour (re)peupler timeSlot
         $populateSlots = function(FormInterface $form, ?User $doctor) {
             $slots = $doctor
                 ? $this->timeSlotRepo->findAvailableSlotsForDoctor($doctor)
                 : [];
+
             $form->add('timeSlot', EntityType::class, [
                 'class'        => TimeSlot::class,
                 'choices'      => $slots,
@@ -78,22 +80,23 @@ class AppointmentType extends AbstractType
             ]);
         };
 
-        // 1) Replis au premier GET (édition)
+        // 1) Remplissage initial pour l'édition (PRE_SET_DATA)
         $builder->addEventListener(FormEvents::PRE_SET_DATA, function(FormEvent $e) use($populateSlots) {
             $appointment = $e->getData();
             $populateSlots($e->getForm(), $appointment->getDoctor());
         });
 
-        // 2) Replis après POST (submit intermédiaire médecin)
+        // 2) Remplissage après POST intermédiaire sur le champ doctor (PRE_SUBMIT)
         $builder->addEventListener(FormEvents::PRE_SUBMIT, function(FormEvent $e) use($populateSlots) {
-            $data = $e->getData();
-            $doctor = $data['doctor'] 
-                ? $this->userRepo->find($data['doctor']) 
+            $data   = $e->getData();
+            $form   = $e->getForm();
+            $doctor = isset($data['doctor'])
+                ? $this->userRepo->find($data['doctor'])
                 : null;
-            $populateSlots($e->getForm(), $doctor);
+            $populateSlots($form, $doctor);
         });
 
-        // 3) (optionnel) Replis aussi après POST_SUBMIT sur doctor, si vous gériez en AJAX
+        // 3) (Optionnel) aussi après POST_SUBMIT sur doctor si utilisé en AJAX
         $builder->get('doctor')->addEventListener(
             FormEvents::POST_SUBMIT,
             function(FormEvent $e) use($populateSlots) {
