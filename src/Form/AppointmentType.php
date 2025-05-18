@@ -6,6 +6,7 @@ use App\Entity\Appointment;
 use App\Entity\TimeSlot;
 use App\Entity\User;
 use App\Repository\TimeSlotRepository;
+use App\Repository\UserRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -17,30 +18,41 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 class AppointmentType extends AbstractType
 {
     private TimeSlotRepository $timeSlotRepo;
+    private UserRepository $userRepo;
 
-    public function __construct(TimeSlotRepository $timeSlotRepo)
+    public function __construct(TimeSlotRepository $timeSlotRepo, UserRepository $userRepo)
     {
         $this->timeSlotRepo = $timeSlotRepo;
+        $this->userRepo     = $userRepo;
     }
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
             ->add('patient', EntityType::class, [
-                'class' => User::class,
-                'choice_label' => 'name',
-                'placeholder' => 'Sélectionnez un patient',
+                'class'         => User::class,
+                'choice_label'  => 'name',
+                'placeholder'   => 'Sélectionnez un patient',
+                'query_builder' => fn(UserRepository $repo) =>
+                    $repo->createQueryBuilder('u')
+                        ->andWhere('u.roles LIKE :role')
+                        ->setParameter('role', '%ROLE_USER%')
+                        ->orderBy('u.name', 'ASC'),
             ])
             ->add('doctor', EntityType::class, [
-                'class' => User::class,
-                'choice_label' => 'name',
-                'placeholder' => 'Sélectionnez un médecin',
+                'class'         => User::class,
+                'choice_label'  => 'name',
+                'placeholder'   => 'Sélectionnez un médecin',
+                'query_builder' => fn(UserRepository $repo) =>
+                    $repo->createQueryBuilder('u')
+                        ->andWhere('u.roles LIKE :role')
+                        ->setParameter('role', '%ROLE_DOCTOR%')
+                        ->orderBy('u.name', 'ASC'),
             ])
-            // initial empty field, will be modified by event
             ->add('timeSlot', EntityType::class, [
-                'class' => TimeSlot::class,
-                'choices' => [],
-                'placeholder' => 'Choisissez d\'abord un médecin',
+                'class'       => TimeSlot::class,
+                'choices'     => [],
+                'placeholder' => 'Choisissez un médecin d abord',
             ])
             ->add('status')
         ;
@@ -49,25 +61,33 @@ class AppointmentType extends AbstractType
             $slots = $doctor
                 ? $this->timeSlotRepo->findAvailableSlotsForDoctor($doctor)
                 : [];
+
             $form->add('timeSlot', EntityType::class, [
-                'class' => TimeSlot::class,
-                'choices' => $slots,
-                'choice_label' => function (TimeSlot $ts) {
-                    return $ts->getStartAt()->format('d/m/Y H:i')
-                         . ' – ' . $ts->getEndAt()->format('H:i');
-                },
-                'placeholder' => 'Sélectionnez un créneau',
+                'class'        => TimeSlot::class,
+                'choices'      => $slots,
+                'choice_label' => fn(TimeSlot $ts) =>
+                    $ts->getStartAt()->format('d/m/Y H:i') . ' – ' . $ts->getEndAt()->format('H:i'),
+                'placeholder'  => 'Sélectionnez un créneau',
             ]);
         };
 
-        // Pre-populate on edit
-        $builder->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event) use ($formModifier) {
+        // Met à jour avant soumission complète (PRE_SUBMIT)
+        $builder->addEventListener(FormEvents::PRE_SUBMIT, function (FormEvent $event) use ($formModifier) {
             $data = $event->getData();
             $form = $event->getForm();
-            $formModifier($form, $data->getDoctor());
+            $doctorId = $data['doctor'] ?? null;
+            $doctor = $doctorId ? $this->userRepo->find($doctorId) : null;
+            $formModifier($form, $doctor);
         });
 
-        // Update timeSlot choices when doctor changes
+        // Pré-remplit lors de l'édition (PRE_SET_DATA)
+        $builder->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event) use ($formModifier) {
+            $appointment = $event->getData();
+            $form = $event->getForm();
+            $formModifier($form, $appointment->getDoctor());
+        });
+
+        // Met à jour après choix du médecin (POST_SUBMIT)
         $builder->get('doctor')->addEventListener(
             FormEvents::POST_SUBMIT,
             function (FormEvent $event) use ($formModifier) {

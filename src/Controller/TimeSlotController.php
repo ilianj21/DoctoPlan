@@ -105,6 +105,18 @@ class TimeSlotController extends AbstractController
             'form'      => $form,
         ]);
     }
+    
+    #[Route('/time-slot/available/{doctor}', name: 'available_slots', methods: ['GET'])]
+    public function available(TimeSlotRepository $repo, User $doctor): JsonResponse
+    {
+        $slots = $repo->findAvailableSlotsForDoctor($doctor);
+        $data  = array_map(fn(TimeSlot $t) => [
+            'id'    => $t->getId(),
+            'label' => $t->getStartAt()->format('d/m/Y H:i') . ' – ' . $t->getEndAt()->format('H:i'),
+        ], $slots);
+
+        return $this->json($data);
+    }
 
     #[Route('/{id}', name: 'app_time_slot_delete', methods: ['POST'])]
     public function delete(Request $request, TimeSlot $timeSlot, EntityManagerInterface $em): Response
