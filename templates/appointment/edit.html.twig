@@ -8,6 +8,36 @@
     {{ include('appointment/_form.html.twig', {'button_label': 'Update'}) }}
 
     <a href="{{ path('app_appointment_index') }}">back to list</a>
+{% endblock %}
 
-    {{ include('appointment/_delete_form.html.twig') }}
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const docSelect  = document.querySelector('#appointment_doctor');
+      const slotSelect = document.querySelector('#appointment_timeSlot');
+
+      if (!docSelect || !slotSelect) return;
+
+      docSelect.addEventListener('change', () => {
+        const doctorId = docSelect.value;
+        if (!doctorId) {
+          slotSelect.innerHTML = '<option value="">Choisissez un médecin d\'abord</option>';
+          return;
+        }
+
+        fetch(`/time-slot/available/${doctorId}`)
+          .then(res => res.json())
+          .then(slots => {
+            slotSelect.innerHTML = '<option value="">Sélectionnez un créneau</option>';
+            slots.forEach(s => {
+              const opt = document.createElement('option');
+              opt.value = s.id;
+              opt.text  = s.label;
+              slotSelect.append(opt);
+            });
+          });
+      });
+    });
+    </script>
 {% endblock %}

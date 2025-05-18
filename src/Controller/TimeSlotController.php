@@ -106,7 +106,7 @@ class TimeSlotController extends AbstractController
         ]);
     }
     
-    #[Route('/time-slot/available/{doctor}', name: 'available_slots', methods: ['GET'])]
+    #[Route('/available/{doctor}', name: 'available_slots', methods: ['GET'])]
     public function available(TimeSlotRepository $repo, User $doctor): JsonResponse
     {
         $slots = $repo->findAvailableSlotsForDoctor($doctor);
