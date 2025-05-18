@@ -7,12 +7,13 @@ use App\Form\TimeSlotType;
 use App\Repository\TimeSlotRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/time/slot')]
-final class TimeSlotController extends AbstractController
+class TimeSlotController extends AbstractController
 {
     #[Route(name: 'app_time_slot_index', methods: ['GET'])]
     public function index(TimeSlotRepository $timeSlotRepository): Response
@@ -23,22 +24,40 @@ final class TimeSlotController extends AbstractController
     }
 
     #[Route('/new', name: 'app_time_slot_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
-    {
+    public function new(
+        Request $request,
+        EntityManagerInterface $em,
+        TimeSlotRepository $repo
+    ): Response {
         $timeSlot = new TimeSlot();
         $form = $this->createForm(TimeSlotType::class, $timeSlot);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->persist($timeSlot);
-            $entityManager->flush();
+            $conflicts = $repo->findOverlappingSlots(
+                $timeSlot->getDoctor(),
+                $timeSlot->getStartAt(),
+                $timeSlot->getEndAt()
+            );
 
-            return $this->redirectToRoute('app_time_slot_index', [], Response::HTTP_SEE_OTHER);
+            if (count($conflicts) > 0) {
+                // Conflit : on reste sur le form et on ajoute un message
+                $form->addError(new FormError(
+                    'Ce créneau chevauche un créneau existant pour ce médecin.'
+                ));
+                $this->addFlash('warning', 'Le créneau choisi n\'est pas disponible.');
+            } else {
+                // Persistance + flash + redirect (POST→REDIRECT→GET)
+                $em->persist($timeSlot);
+                $em->flush();
+                $this->addFlash('success', 'Créneau enregistré avec succès.');
+                return $this->redirectToRoute('app_time_slot_index');
+            }
         }
 
         return $this->render('time_slot/new.html.twig', [
             'time_slot' => $timeSlot,
-            'form' => $form,
+            'form'      => $form,
         ]);
     }
 
@@ -51,31 +70,50 @@ final class TimeSlotController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_time_slot_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, TimeSlot $timeSlot, EntityManagerInterface $entityManager): Response
-    {
+    public function edit(
+        Request $request,
+        TimeSlot $timeSlot,
+        EntityManagerInterface $em,
+        TimeSlotRepository $repo
+    ): Response {
         $form = $this->createForm(TimeSlotType::class, $timeSlot);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->flush();
+            $conflicts = $repo->findOverlappingSlots(
+                $timeSlot->getDoctor(),
+                $timeSlot->getStartAt(),
+                $timeSlot->getEndAt()
+            );
+            // Exclure le créneau actuel
+            $conflicts = array_filter($conflicts, fn($c) => $c->getId() !== $timeSlot->getId());
 
-            return $this->redirectToRoute('app_time_slot_index', [], Response::HTTP_SEE_OTHER);
+            if (count($conflicts) > 0) {
+                $form->addError(new FormError(
+                    'Ce créneau chevauche un créneau existant pour ce médecin.'
+                ));
+                $this->addFlash('warning', 'Le créneau modifié n\'est pas disponible.');
+            } else {
+                $em->flush();
+                $this->addFlash('success', 'Créneau mis à jour avec succès.');
+                return $this->redirectToRoute('app_time_slot_index');
+            }
         }
 
         return $this->render('time_slot/edit.html.twig', [
             'time_slot' => $timeSlot,
-            'form' => $form,
+            'form'      => $form,
         ]);
     }
 
     #[Route('/{id}', name: 'app_time_slot_delete', methods: ['POST'])]
-    public function delete(Request $request, TimeSlot $timeSlot, EntityManagerInterface $entityManager): Response
+    public function delete(Request $request, TimeSlot $timeSlot, EntityManagerInterface $em): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$timeSlot->getId(), $request->getPayload()->getString('_token'))) {
-            $entityManager->remove($timeSlot);
-            $entityManager->flush();
+        if ($this->isCsrfTokenValid('delete'.$timeSlot->getId(), $request->request->get('_token'))) {
+            $em->remove($timeSlot);
+            $em->flush();
         }
 
-        return $this->redirectToRoute('app_time_slot_index', [], Response::HTTP_SEE_OTHER);
+        return $this->redirectToRoute('app_time_slot_index');
     }
 }
