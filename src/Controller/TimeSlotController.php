@@ -34,19 +34,15 @@ class TimeSlotController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // 1) fusion date + heure
-            $dateStart = $form->get('startAt')->getData();
-            $timeStart = $form->get('startAtTime')->getData();
-            $dateEnd   = $form->get('endAt')->getData();
-            $timeEnd   = $form->get('endAtTime')->getData();
-            $timeSlot->setStartAt(new \DateTimeImmutable(
-                $dateStart->format('Y-m-d').' '.$timeStart->format('H:i')
-            ));
-            $timeSlot->setEndAt(new \DateTime(
-                $dateEnd->format('Y-m-d').' '.$timeEnd->format('H:i')
-            ));
+            // fusion date + heure
+            $d1 = $form->get('startAt')->getData();
+            $t1 = $form->get('startAtTime')->getData();
+            $d2 = $form->get('endAt')->getData();
+            $t2 = $form->get('endAtTime')->getData();
+            $timeSlot->setStartAt(new \DateTimeImmutable($d1->format('Y-m-d').' '.$t1->format('H:i')));
+            $timeSlot->setEndAt(new \DateTime($d2->format('Y-m-d').' '.$t2->format('H:i')));
 
-            // 2) détection de chevauchement
+            // détection chevauchement
             $conflicts = $repo->findOverlappingSlots(
                 $timeSlot->getDoctor(),
                 $timeSlot->getStartAt(),
@@ -54,9 +50,7 @@ class TimeSlotController extends AbstractController
             );
 
             if (count($conflicts) > 0) {
-                $form->addError(new FormError(
-                    'Ce créneau chevauche un autre créneau pour ce médecin.'
-                ));
+                $form->addError(new FormError('Ce créneau chevauche un autre créneau pour ce médecin.'));
                 $this->addFlash('warning', 'Le créneau choisi n\'est pas disponible.');
             } else {
                 $em->persist($timeSlot);
@@ -69,7 +63,7 @@ class TimeSlotController extends AbstractController
 
         return $this->render('time_slot/new.html.twig', [
             'time_slot' => $timeSlot,
-            'form'      => $form,
+            'form'      => $form->createView(),
         ]);
     }
 
@@ -84,19 +78,15 @@ class TimeSlotController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // 1) fusion date + heure
-            $dateStart = $form->get('startAt')->getData();
-            $timeStart = $form->get('startAtTime')->getData();
-            $dateEnd   = $form->get('endAt')->getData();
-            $timeEnd   = $form->get('endAtTime')->getData();
-            $timeSlot->setStartAt(new \DateTimeImmutable(
-                $dateStart->format('Y-m-d').' '.$timeStart->format('H:i')
-            ));
-            $timeSlot->setEndAt(new \DateTime(
-                $dateEnd->format('Y-m-d').' '.$timeEnd->format('H:i')
-            ));
+            // fusion date + heure
+            $d1 = $form->get('startAt')->getData();
+            $t1 = $form->get('startAtTime')->getData();
+            $d2 = $form->get('endAt')->getData();
+            $t2 = $form->get('endAtTime')->getData();
+            $timeSlot->setStartAt(new \DateTimeImmutable($d1->format('Y-m-d').' '.$t1->format('H:i')));
+            $timeSlot->setEndAt(new \DateTime($d2->format('Y-m-d').' '.$t2->format('H:i')));
 
-            // 2) détection de chevauchement (hors lui-même)
+            // détection chevauchement hors lui-même
             $conflicts = $repo->findOverlappingSlots(
                 $timeSlot->getDoctor(),
                 $timeSlot->getStartAt(),
@@ -105,9 +95,7 @@ class TimeSlotController extends AbstractController
             $conflicts = array_filter($conflicts, fn($c) => $c->getId() !== $timeSlot->getId());
 
             if (count($conflicts) > 0) {
-                $form->addError(new FormError(
-                    'Ce créneau chevauche un autre créneau pour ce médecin.'
-                ));
+                $form->addError(new FormError('Ce créneau chevauche un autre créneau pour ce médecin.'));
                 $this->addFlash('warning', 'Le créneau modifié n\'est pas disponible.');
             } else {
                 $em->flush();
@@ -119,7 +107,7 @@ class TimeSlotController extends AbstractController
 
         return $this->render('time_slot/edit.html.twig', [
             'time_slot' => $timeSlot,
-            'form'      => $form,
+            'form'      => $form->createView(),
         ]);
     }
 
