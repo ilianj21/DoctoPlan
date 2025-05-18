@@ -3,21 +3,19 @@
 namespace App\Controller;
 
 use App\Entity\TimeSlot;
-use App\Entity\User;
+use App\Form\TimeSlotType;
 use App\Repository\TimeSlotRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/time/slot')]
 class TimeSlotController extends AbstractController
 {
-    #[Route(name: 'app_time_slot_index', methods: ['GET'])]
+    #[Route('/', name: 'app_time_slot_index', methods: ['GET'])]
     public function index(TimeSlotRepository $timeSlotRepository): Response
     {
         return $this->render('time_slot/index.html.twig', [
@@ -36,6 +34,19 @@ class TimeSlotController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // 1) fusion date + heure
+            $dateStart = $form->get('startAt')->getData();
+            $timeStart = $form->get('startAtTime')->getData();
+            $dateEnd   = $form->get('endAt')->getData();
+            $timeEnd   = $form->get('endAtTime')->getData();
+            $timeSlot->setStartAt(new \DateTimeImmutable(
+                $dateStart->format('Y-m-d').' '.$timeStart->format('H:i')
+            ));
+            $timeSlot->setEndAt(new \DateTime(
+                $dateEnd->format('Y-m-d').' '.$timeEnd->format('H:i')
+            ));
+
+            // 2) détection de chevauchement
             $conflicts = $repo->findOverlappingSlots(
                 $timeSlot->getDoctor(),
                 $timeSlot->getStartAt(),
@@ -43,16 +54,15 @@ class TimeSlotController extends AbstractController
             );
 
             if (count($conflicts) > 0) {
-                // Conflit : on reste sur le form et on ajoute un message
                 $form->addError(new FormError(
-                    'Ce créneau chevauche un créneau existant pour ce médecin.'
+                    'Ce créneau chevauche un autre créneau pour ce médecin.'
                 ));
                 $this->addFlash('warning', 'Le créneau choisi n\'est pas disponible.');
             } else {
-                // Persistance + flash + redirect (POST→REDIRECT→GET)
                 $em->persist($timeSlot);
                 $em->flush();
                 $this->addFlash('success', 'Créneau enregistré avec succès.');
+
                 return $this->redirectToRoute('app_time_slot_index');
             }
         }
@@ -60,14 +70,6 @@ class TimeSlotController extends AbstractController
         return $this->render('time_slot/new.html.twig', [
             'time_slot' => $timeSlot,
             'form'      => $form,
-        ]);
-    }
-
-    #[Route('/{id}', name: 'app_time_slot_show', methods: ['GET'])]
-    public function show(TimeSlot $timeSlot): Response
-    {
-        return $this->render('time_slot/show.html.twig', [
-            'time_slot' => $timeSlot,
         ]);
     }
 
@@ -82,22 +84,35 @@ class TimeSlotController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // 1) fusion date + heure
+            $dateStart = $form->get('startAt')->getData();
+            $timeStart = $form->get('startAtTime')->getData();
+            $dateEnd   = $form->get('endAt')->getData();
+            $timeEnd   = $form->get('endAtTime')->getData();
+            $timeSlot->setStartAt(new \DateTimeImmutable(
+                $dateStart->format('Y-m-d').' '.$timeStart->format('H:i')
+            ));
+            $timeSlot->setEndAt(new \DateTime(
+                $dateEnd->format('Y-m-d').' '.$timeEnd->format('H:i')
+            ));
+
+            // 2) détection de chevauchement (hors lui-même)
             $conflicts = $repo->findOverlappingSlots(
                 $timeSlot->getDoctor(),
                 $timeSlot->getStartAt(),
                 $timeSlot->getEndAt()
             );
-            // Exclure le créneau actuel
             $conflicts = array_filter($conflicts, fn($c) => $c->getId() !== $timeSlot->getId());
 
             if (count($conflicts) > 0) {
                 $form->addError(new FormError(
-                    'Ce créneau chevauche un créneau existant pour ce médecin.'
+                    'Ce créneau chevauche un autre créneau pour ce médecin.'
                 ));
                 $this->addFlash('warning', 'Le créneau modifié n\'est pas disponible.');
             } else {
                 $em->flush();
                 $this->addFlash('success', 'Créneau mis à jour avec succès.');
+
                 return $this->redirectToRoute('app_time_slot_index');
             }
         }
@@ -108,25 +123,13 @@ class TimeSlotController extends AbstractController
         ]);
     }
 
-    #[Route('/available/{doctor}', name: 'available_slots', methods: ['GET'])]
-    #[IsGranted('ROLE_DOCTOR')] 
-    public function available(TimeSlotRepository $repo, User $doctor): JsonResponse
-    {
-        $slots = $repo->findAvailableSlotsForDoctor($doctor);
-        $data  = array_map(fn(TimeSlot $t) => [
-            'id'    => $t->getId(),
-            'label' => $t->getStartAt()->format('d/m/Y H:i') . ' – ' . $t->getEndAt()->format('H:i'),
-        ], $slots);
-
-        return $this->json($data);
-    }
-
     #[Route('/{id}', name: 'app_time_slot_delete', methods: ['POST'])]
     public function delete(Request $request, TimeSlot $timeSlot, EntityManagerInterface $em): Response
     {
         if ($this->isCsrfTokenValid('delete'.$timeSlot->getId(), $request->request->get('_token'))) {
             $em->remove($timeSlot);
             $em->flush();
+            $this->addFlash('success', 'Créneau supprimé.');
         }
 
         return $this->redirectToRoute('app_time_slot_index');

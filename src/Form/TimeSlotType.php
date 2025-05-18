@@ -1,39 +1,58 @@
 <?php
-// src/Form/TimeSlotType.php
+
 namespace App\Form;
 
 use App\Entity\TimeSlot;
 use App\Entity\User;
-use App\Repository\UserRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\DateType;
+use Symfony\Component\Form\Extension\Core\Type\TimeType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class TimeSlotType extends AbstractType
 {
-    public function buildForm(FormBuilderInterface $builder, array $options): void
+    public function buildForm(FormBuilderInterface $b, array $o): void
     {
-        $builder
-            ->add('startAt')
-            ->add('endAt')
+        $today = new \DateTimeImmutable('today');
+
+        $b
+            ->add('startAt', DateType::class, [
+                'widget'    => 'single_text',
+                'html5'     => true,
+                'attr'      => ['min' => $today->format('Y-m-d')],
+            ])
+            ->add('startAtTime', TimeType::class, [
+                'mapped'    => false,
+                'widget'    => 'choice',
+                'hours'     => [8,9,10,11,12,14,15,16,17],
+                'minutes'   => [0,30],
+                'label'     => 'Heure de début',
+            ])
+            ->add('endAt', DateType::class, [
+                'widget'    => 'single_text',
+                'html5'     => true,
+                'attr'      => ['min' => $today->format('Y-m-d')],
+            ])
+            ->add('endAtTime', TimeType::class, [
+                'mapped'    => false,
+                'widget'    => 'choice',
+                'hours'     => [8,9,10,11,12,14,15,16,17],
+                'minutes'   => [0,30],
+                'label'     => 'Heure de fin',
+            ])
             ->add('doctor', EntityType::class, [
-                'class' => User::class,
+                'class'        => User::class,
                 'choice_label' => 'name',
-                'placeholder' => 'Sélectionnez un médecin',
-                'query_builder' => function(UserRepository $repo) {
-                    return $repo->createQueryBuilder('u')
-                        ->andWhere('u.roles LIKE :role')
-                        ->setParameter('role', '%ROLE_DOCTOR%')
-                        ->orderBy('u.name', 'ASC');
-                },
+                'placeholder'  => 'Sélectionnez un médecin',
             ])
         ;
     }
 
-    public function configureOptions(OptionsResolver $resolver): void
+    public function configureOptions(OptionsResolver $r): void
     {
-        $resolver->setDefaults([
+        $r->setDefaults([
             'data_class' => TimeSlot::class,
         ]);
     }

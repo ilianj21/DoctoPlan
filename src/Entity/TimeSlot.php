@@ -3,107 +3,67 @@
 namespace App\Entity;
 
 use App\Repository\TimeSlotRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ORM\Entity(repositoryClass: TimeSlotRepository::class)]
 class TimeSlot
 {
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
+    #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    private ?\DateTimeInterface $startAt = null;
+    #[ORM\Column(type: 'datetime_immutable')]
+    #[Assert\NotNull]
+    #[Assert\GreaterThan('now', message: 'Le début du créneau doit être dans le futur.')]
+    private ?\DateTimeImmutable $startAt = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[ORM\Column(type: 'datetime')]
+    #[Assert\NotNull]
     private ?\DateTimeInterface $endAt = null;
 
-    #[ORM\ManyToOne(inversedBy: 'timeSlots')]
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: false)]
     private ?User $doctor = null;
 
-    /**
-     * @var Collection<int, Appointment>
-     */
-    #[ORM\OneToMany(targetEntity: Appointment::class, mappedBy: 'timeSlot')]
-    private Collection $appointments;
+    // … vos autres propriétés / collections …
 
-    public function __construct()
-    {
-        $this->appointments = new ArrayCollection();
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function getStartAt(): ?\DateTimeInterface
-    {
-        return $this->startAt;
-    }
-
-    public function setStartAt(\DateTimeInterface $startAt): static
-    {
-        $this->startAt = $startAt;
-
-        return $this;
-    }
-
-    public function getEndAt(): ?\DateTimeInterface
-    {
-        return $this->endAt;
-    }
-
-    public function setEndAt(\DateTimeInterface $endAt): static
-    {
-        $this->endAt = $endAt;
-
-        return $this;
-    }
-
-    public function getDoctor(): ?User
-    {
-        return $this->doctor;
-    }
-
-    public function setDoctor(?User $doctor): static
-    {
-        $this->doctor = $doctor;
-
-        return $this;
-    }
+    public function getId(): ?int         { return $this->id; }
+    public function getStartAt(): ?\DateTimeImmutable  { return $this->startAt; }
+    public function setStartAt(\DateTimeImmutable $dt): self { $this->startAt = $dt; return $this; }
+    public function getEndAt(): ?\DateTimeInterface   { return $this->endAt; }
+    public function setEndAt(\DateTimeInterface $dt): self   { $this->endAt   = $dt; return $this; }
+    public function getDoctor(): ?User    { return $this->doctor; }
+    public function setDoctor(User $d): self { $this->doctor = $d; return $this; }
 
     /**
-     * @return Collection<int, Appointment>
+     * Vérifie heure de début/fin et plage autorisée.
      */
-    public function getAppointments(): Collection
+    #[Assert\Callback]
+    public function validateHours(ExecutionContextInterface $ctx)
     {
-        return $this->appointments;
-    }
-
-    public function addAppointment(Appointment $appointment): static
-    {
-        if (!$this->appointments->contains($appointment)) {
-            $this->appointments->add($appointment);
-            $appointment->setTimeSlot($this);
+        if (!$this->startAt || !$this->endAt) {
+            return;
         }
 
-        return $this;
-    }
-
-    public function removeAppointment(Appointment $appointment): static
-    {
-        if ($this->appointments->removeElement($appointment)) {
-            // set the owning side to null (unless already changed)
-            if ($appointment->getTimeSlot() === $this) {
-                $appointment->setTimeSlot(null);
-            }
+        // fin doit être après début
+        if ($this->endAt <= $this->startAt) {
+            $ctx->buildViolation('La fin doit être après le début.')
+                ->atPath('endAt')
+                ->addViolation();
         }
 
-        return $this;
+        // récupère l’heure (int) de début et fin
+        $h1 = (int)$this->startAt->format('H');
+        $h2 = (int)$this->endAt->format('H');
+
+        $inMorning = $h1 >= 8  && $h2 <= 13;
+        $inAfternoon = $h1 >= 14 && $h2 <= 18;
+
+        if (!($inMorning || $inAfternoon)) {
+            $ctx->buildViolation('Heures autorisées : 08:00–13:00 ou 14:00–18:00.')
+                ->atPath('startAt')
+                ->addViolation();
+        }
     }
 }
