@@ -1,4 +1,5 @@
 <?php
+// src/Controller/AppointmentController.php
 
 namespace App\Controller;
 
@@ -6,6 +7,7 @@ use App\Entity\Appointment;
 use App\Form\AppointmentType;
 use App\Repository\AppointmentRepository;
 use App\Repository\TimeSlotRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -27,16 +29,20 @@ class AppointmentController extends AbstractController
     public function new(
         Request $request,
         EntityManagerInterface $em,
-        TimeSlotRepository $slotRepo
+        TimeSlotRepository $slotRepo,
+        UserRepository $userRepo
     ): Response {
         $appointment = new Appointment();
 
-        // Récupère doctor pour précharger les créneaux après soumission intermédiaire
-        $submitted = $request->request->get('appointment', []);
-        $doctorId  = $submitted['doctor'] ?? null;
-        $doctor    = $doctorId
-            ? $this->getDoctrine()->getRepository(\App\Entity\User::class)->find($doctorId)
-            : null;
+        // Récupérer les données soumises, sans provoquer l'erreur "non-scalar default"
+        $submitted = $request->request->get('appointment');
+        if (!\is_array($submitted)) {
+            $submitted = [];
+        }
+
+        // Identifier le médecin sélectionné (pour pré-charger les créneaux)
+        $doctorId = $submitted['doctor'] ?? null;
+        $doctor   = $doctorId ? $userRepo->find($doctorId) : null;
 
         $form = $this->createForm(AppointmentType::class, $appointment, [
             'doctor' => $doctor,
@@ -47,7 +53,7 @@ class AppointmentController extends AbstractController
             if ($appointment->getTimeSlot() && $appointment->getStatus()) {
                 $em->persist($appointment);
                 $em->flush();
-                $this->addFlash('success','Rendez-vous créé avec succès.');
+                $this->addFlash('success', 'Rendez-vous créé avec succès.');
 
                 return $this->redirectToRoute('app_appointment_index');
             }
@@ -71,9 +77,19 @@ class AppointmentController extends AbstractController
         Request $request,
         Appointment $appointment,
         EntityManagerInterface $em,
-        TimeSlotRepository $slotRepo
+        TimeSlotRepository $slotRepo,
+        UserRepository $userRepo
     ): Response {
-        $doctor = $appointment->getDoctor();
+        // Même logique pour récupérer le doctor si on re-soumet via onchange
+        $submitted = $request->request->get('appointment');
+        if (!\is_array($submitted)) {
+            $submitted = [];
+        }
+
+        $doctorId = $submitted['doctor'] 
+            ?? $appointment->getDoctor()?->getId();
+        $doctor   = $doctorId ? $userRepo->find($doctorId) : null;
+
         $form = $this->createForm(AppointmentType::class, $appointment, [
             'doctor' => $doctor,
         ]);
@@ -82,7 +98,7 @@ class AppointmentController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             if ($appointment->getTimeSlot() && $appointment->getStatus()) {
                 $em->flush();
-                $this->addFlash('success','Rendez-vous mis à jour.');
+                $this->addFlash('success', 'Rendez-vous mis à jour.');
 
                 return $this->redirectToRoute('app_appointment_index');
             }
@@ -103,7 +119,7 @@ class AppointmentController extends AbstractController
         if ($this->isCsrfTokenValid('delete'.$appointment->getId(), $request->request->get('_token'))) {
             $em->remove($appointment);
             $em->flush();
-            $this->addFlash('success','Rendez-vous supprimé.');
+            $this->addFlash('success', 'Rendez-vous supprimé.');
         }
 
         return $this->redirectToRoute('app_appointment_index');
