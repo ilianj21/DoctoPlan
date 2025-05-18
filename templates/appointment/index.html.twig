@@ -3,47 +3,53 @@
 {% block title %}Appointment index{% endblock %}
 
 {% block body %}
-    <h1>Appointment index</h1>
+<h1>Appointment index</h1>
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Id</th>
-                <th>Patient</th>
-                <th>Doctor</th>
-                <th>TimeSlot</th>
-                <th>Status</th>
-                <th>actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for appointment in appointments %}
-            <tr>
-                <td>{{ appointment.id }}</td>
-                <td>{{ appointment.patient  ? appointment.patient.name  : '—' }}</td>
-                <td>{{ appointment.doctor   ? appointment.doctor.name   : '—' }}</td>
-                <td>
-                    {% if appointment.timeSlot %}
-                        {{ appointment.timeSlot.startAt|date('d/m/Y H:i') }}
-                        –
-                        {{ appointment.timeSlot.endAt|date('H:i') }}
-                    {% else %}
-                        <em>Pas de créneau</em>
-                    {% endif %}
-                </td>
-                <td>{{ appointment.status }}</td>
-                <td>
-                    <a href="{{ path('app_appointment_show', {'id': appointment.id}) }}">show</a>
-                    <a href="{{ path('app_appointment_edit', {'id': appointment.id}) }}">edit</a>
-                </td>
-            </tr>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Id</th>
+      <th>Patient</th>
+      <th>Doctor</th>
+      <th>TimeSlot</th>
+      <th>Status</th>
+      <th>actions</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for appointment in appointments %}
+    <tr>
+      <td>{{ appointment.id }}</td>
+      <td>{{ appointment.patient ? appointment.patient.name : '—' }}</td>
+      <td>{{ appointment.doctor  ? appointment.doctor.name  : '—' }}</td>
+      <td>
+        {% if appointment.timeSlot %}
+          {{ appointment.timeSlot.startAt|date('d/m/Y H:i') }}
+          – {{ appointment.timeSlot.endAt|date('H:i') }}
         {% else %}
-            <tr>
-                <td colspan="6">no records found</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+          <em>Pas de créneau</em>
+        {% endif %}
+      </td>
+      <td>{{ appointment.status }}</td>
+      <td class="d-flex">
+        <a class="btn btn-sm btn-primary me-1" href="{{ path('app_appointment_show', {'id': appointment.id}) }}">show</a>
+        <a class="btn btn-sm btn-secondary me-1" href="{{ path('app_appointment_edit', {'id': appointment.id}) }}">edit</a>
+        <form method="post"
+              action="{{ path('app_appointment_delete', {'id': appointment.id}) }}"
+              onsubmit="return confirm('Voulez-vous vraiment supprimer ce rendez-vous ?');"
+        >
+          <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ appointment.id) }}">
+          <button class="btn btn-sm btn-danger">delete</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr>
+      <td colspan="6">no records found</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
 
-    <a href="{{ path('app_appointment_new') }}">Create new</a>
+<a class="btn btn-success" href="{{ path('app_appointment_new') }}">Create new</a>
 {% endblock %}
