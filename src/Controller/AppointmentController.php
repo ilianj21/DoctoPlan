@@ -30,30 +30,39 @@ class AppointmentController extends AbstractController
         TimeSlotRepository $slotRepo
     ): Response {
         $appointment = new Appointment();
-        // récupérer doctor pré-soumis pour recharger les créneaux
+
+        // Récupère doctor pour précharger les créneaux après soumission intermédiaire
         $submitted = $request->request->get('appointment', []);
         $doctorId  = $submitted['doctor'] ?? null;
-        $doctor    = $doctorId 
-            ? $slotRepo->getEntityManager()->getRepository(\App\Entity\User::class)->find($doctorId)
+        $doctor    = $doctorId
+            ? $this->getDoctrine()->getRepository(\App\Entity\User::class)->find($doctorId)
             : null;
 
         $form = $this->createForm(AppointmentType::class, $appointment, [
             'doctor' => $doctor,
         ]);
-
         $form->handleRequest($request);
+
         if ($form->isSubmitted() && $form->isValid()) {
-            // on persiste dès que timeSlot et status sont remplis
             if ($appointment->getTimeSlot() && $appointment->getStatus()) {
                 $em->persist($appointment);
                 $em->flush();
-                $this->addFlash('success','RDV créé avec succès.');
+                $this->addFlash('success','Rendez-vous créé avec succès.');
+
                 return $this->redirectToRoute('app_appointment_index');
             }
         }
 
         return $this->render('appointment/new.html.twig', [
             'form' => $form->createView(),
+        ]);
+    }
+
+    #[Route('/{id}', name: 'app_appointment_show', methods: ['GET'])]
+    public function show(Appointment $appointment): Response
+    {
+        return $this->render('appointment/show.html.twig', [
+            'appointment' => $appointment,
         ]);
     }
 
@@ -64,24 +73,24 @@ class AppointmentController extends AbstractController
         EntityManagerInterface $em,
         TimeSlotRepository $slotRepo
     ): Response {
-        // même logique pour recharger les créneaux existants
-        $doctor    = $appointment->getDoctor();
+        $doctor = $appointment->getDoctor();
         $form = $this->createForm(AppointmentType::class, $appointment, [
             'doctor' => $doctor,
         ]);
-
         $form->handleRequest($request);
+
         if ($form->isSubmitted() && $form->isValid()) {
             if ($appointment->getTimeSlot() && $appointment->getStatus()) {
                 $em->flush();
-                $this->addFlash('success','RDV mis à jour.');
+                $this->addFlash('success','Rendez-vous mis à jour.');
+
                 return $this->redirectToRoute('app_appointment_index');
             }
         }
 
         return $this->render('appointment/edit.html.twig', [
             'form'        => $form->createView(),
-            'appointment'=> $appointment,
+            'appointment' => $appointment,
         ]);
     }
 
@@ -94,8 +103,9 @@ class AppointmentController extends AbstractController
         if ($this->isCsrfTokenValid('delete'.$appointment->getId(), $request->request->get('_token'))) {
             $em->remove($appointment);
             $em->flush();
-            $this->addFlash('success','RDV supprimé.');
+            $this->addFlash('success','Rendez-vous supprimé.');
         }
+
         return $this->redirectToRoute('app_appointment_index');
     }
 }

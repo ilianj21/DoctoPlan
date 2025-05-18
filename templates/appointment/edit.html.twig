@@ -3,40 +3,13 @@
 {% block title %}Edit Appointment{% endblock %}
 
 {% block body %}
-    <h1>Edit Appointment</h1>
+    <h1>Edit Appointment #{{ appointment.id }}</h1>
 
-    {{ include('appointment/_form.html.twig', {'button_label': 'Update'}) }}
+    {{ form_start(form) }}
+        {{ form_widget(form) }}
+        <button class="btn btn-primary">Mettre à jour</button>
+    {{ form_end(form) }}
 
     <a href="{{ path('app_appointment_index') }}">back to list</a>
-{% endblock %}
-
-{% block javascripts %}
-  {{ parent() }}
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const docSelect  = document.querySelector('#appointment_doctor');
-    const slotSelect = document.querySelector('#appointment_timeSlot');
-    if (!docSelect || !slotSelect) return;
-
-    docSelect.addEventListener('change', () => {
-      const id = docSelect.value;
-      if (!id) {
-        slotSelect.innerHTML = '<option value="">Choisissez un médecin d\'abord</option>';
-        return;
-      }
-      fetch(`/time/slot/available/${id}`)
-        .then(resp => resp.json())
-        .then(slots => {
-          slotSelect.innerHTML = '<option value="">Sélectionnez un créneau</option>';
-          slots.forEach(s => {
-            let opt = document.createElement('option');
-            opt.value = s.id;
-            opt.text  = s.label;
-            slotSelect.append(opt);
-          });
-        })
-        .catch(console.error);
-    });
-  });
-  </script>
+    <a href="{{ path('app_appointment_show', {'id': appointment.id}) }}">show</a>
 {% endblock %}

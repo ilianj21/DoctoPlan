@@ -5,37 +5,10 @@
 {% block body %}
     <h1>Create new Appointment</h1>
 
-    {{ include('appointment/_form.html.twig') }}
+    {{ form_start(form) }}
+        {{ form_widget(form) }}
+        <button class="btn btn-success">Enregistrer</button>
+    {{ form_end(form) }}
 
     <a href="{{ path('app_appointment_index') }}">back to list</a>
-{% endblock %}
-{% block javascripts %}
-  {{ parent() }}
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const docSelect  = document.querySelector('#appointment_doctor');
-    const slotSelect = document.querySelector('#appointment_timeSlot');
-    if (!docSelect || !slotSelect) return;
-
-    docSelect.addEventListener('change', () => {
-      const id = docSelect.value;
-      if (!id) {
-        slotSelect.innerHTML = '<option value="">Choisissez un médecin d\'abord</option>';
-        return;
-      }
-      fetch(`/time/slot/available/${id}`)
-        .then(resp => resp.json())
-        .then(slots => {
-          slotSelect.innerHTML = '<option value="">Sélectionnez un créneau</option>';
-          slots.forEach(s => {
-            let opt = document.createElement('option');
-            opt.value = s.id;
-            opt.text  = s.label;
-            slotSelect.append(opt);
-          });
-        })
-        .catch(console.error);
-    });
-  });
-  </script>
 {% endblock %}
