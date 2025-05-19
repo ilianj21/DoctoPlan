@@ -16,8 +16,11 @@ security:
             security: false
 
         main:
+            # lazy‐loading du token
             lazy: true
-            provider: app_user_provider    # <-- provider au singulier
+
+            # provider (singulier !) correctement indenté sous main
+            provider: app_user_provider
 
             form_login:
                 login_path: login
