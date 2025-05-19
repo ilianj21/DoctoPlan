@@ -1,4 +1,5 @@
 <?php
+// src/Entity/User.php
 
 namespace App\Entity;
 
@@ -6,23 +7,35 @@ use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
-class User
+#[UniqueEntity(fields: ['email'], message: 'Cet email est déjà utilisé.')]
+class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
+    #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 180)]
+    #[ORM\Column(length: 180, unique: true)]
+    #[Assert\NotBlank(message: 'L’email est obligatoire.')]
+    #[Assert\Email(message: 'L’email "{{ value }}" n’est pas valide.')]
     private ?string $email = null;
 
-    #[ORM\Column(length: 255)]
+    /**
+     * @var string The hashed password
+     */
+    #[ORM\Column]
     private ?string $password = null;
 
-    #[ORM\Column]
+    #[ORM\Column(type: 'json')]
     private array $roles = [];
+
+    #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: 'Le nom est obligatoire.')]
+    private ?string $name = null;
 
     /**
      * @var Collection<int, TimeSlot>
@@ -34,7 +47,7 @@ class User
      * @var Collection<int, Appointment>
      */
     #[ORM\OneToMany(targetEntity: Appointment::class, mappedBy: 'patient')]
-    private Collection $appointements;
+    private Collection $appointments;
 
     /**
      * @var Collection<int, Appointment>
@@ -48,15 +61,12 @@ class User
     #[ORM\OneToMany(targetEntity: Notification::class, mappedBy: 'user')]
     private Collection $notifications;
 
-    #[ORM\Column(length: 255)]
-    private ?string $name = null;
-
     public function __construct()
     {
-        $this->timeSlots = new ArrayCollection();
-        $this->appointements = new ArrayCollection();
+        $this->timeSlots          = new ArrayCollection();
+        $this->appointments       = new ArrayCollection();
         $this->doctorAppointments = new ArrayCollection();
-        $this->notifications = new ArrayCollection();
+        $this->notifications      = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -72,152 +82,64 @@ class User
     public function setEmail(string $email): static
     {
         $this->email = $email;
-
         return $this;
     }
 
-    public function getPassword(): ?string
+    /**
+     * A visual identifier that represents this user.
+     */
+    public function getUserIdentifier(): string
     {
-        return $this->password;
+        return (string) $this->email;
+    }
+
+    /**
+     * @deprecated since Symfony 5.3, use getUserIdentifier()
+     */
+    public function getUsername(): string
+    {
+        return $this->getUserIdentifier();
+    }
+
+    /**
+     * @see UserInterface
+     */
+    public function getRoles(): array
+    {
+        $roles = $this->roles;
+        // garantit au moins ROLE_USER
+        if (!in_array('ROLE_USER', $roles, true)) {
+            $roles[] = 'ROLE_USER';
+        }
+        return $roles;
+    }
+
+    public function setRoles(array $roles): static
+    {
+        $this->roles = array_unique($roles);
+        return $this;
+    }
+
+    /**
+     * @see PasswordAuthenticatedUserInterface
+     */
+    public function getPassword(): string
+    {
+        return (string) $this->password;
     }
 
     public function setPassword(string $password): static
     {
         $this->password = $password;
-
-        return $this;
-    }
-
-    public function getRoles(): array
-    {
-        return $this->roles;
-    }
-
-    public function setRoles(array $roles): static
-    {
-        $this->roles = $roles;
-
         return $this;
     }
 
     /**
-     * @return Collection<int, TimeSlot>
+     * @see UserInterface
      */
-    public function getTimeSlots(): Collection
+    public function eraseCredentials(): void
     {
-        return $this->timeSlots;
-    }
-
-    public function addTimeSlot(TimeSlot $timeSlot): static
-    {
-        if (!$this->timeSlots->contains($timeSlot)) {
-            $this->timeSlots->add($timeSlot);
-            $timeSlot->setDoctor($this);
-        }
-
-        return $this;
-    }
-
-    public function removeTimeSlot(TimeSlot $timeSlot): static
-    {
-        if ($this->timeSlots->removeElement($timeSlot)) {
-            // set the owning side to null (unless already changed)
-            if ($timeSlot->getDoctor() === $this) {
-                $timeSlot->setDoctor(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Appointment>
-     */
-    public function getAppointements(): Collection
-    {
-        return $this->appointements;
-    }
-
-    public function addAppointement(Appointment $appointement): static
-    {
-        if (!$this->appointements->contains($appointement)) {
-            $this->appointements->add($appointement);
-            $appointement->setPatient($this);
-        }
-
-        return $this;
-    }
-
-    public function removeAppointement(Appointment $appointement): static
-    {
-        if ($this->appointements->removeElement($appointement)) {
-            // set the owning side to null (unless already changed)
-            if ($appointement->getPatient() === $this) {
-                $appointement->setPatient(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Appointment>
-     */
-    public function getDoctorAppointments(): Collection
-    {
-        return $this->doctorAppointments;
-    }
-
-    public function addDoctorAppointment(Appointment $doctorAppointment): static
-    {
-        if (!$this->doctorAppointments->contains($doctorAppointment)) {
-            $this->doctorAppointments->add($doctorAppointment);
-            $doctorAppointment->setDoctor($this);
-        }
-
-        return $this;
-    }
-
-    public function removeDoctorAppointment(Appointment $doctorAppointment): static
-    {
-        if ($this->doctorAppointments->removeElement($doctorAppointment)) {
-            // set the owning side to null (unless already changed)
-            if ($doctorAppointment->getDoctor() === $this) {
-                $doctorAppointment->setDoctor(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Notification>
-     */
-    public function getNotifications(): Collection
-    {
-        return $this->notifications;
-    }
-
-    public function addNotification(Notification $notification): static
-    {
-        if (!$this->notifications->contains($notification)) {
-            $this->notifications->add($notification);
-            $notification->setUser($this);
-        }
-
-        return $this;
-    }
-
-    public function removeNotification(Notification $notification): static
-    {
-        if ($this->notifications->removeElement($notification)) {
-            // set the owning side to null (unless already changed)
-            if ($notification->getUser() === $this) {
-                $notification->setUser(null);
-            }
-        }
-
-        return $this;
+        // si vous stockez un plainPassword, effacez-le ici
     }
 
     public function getName(): ?string
@@ -228,7 +150,38 @@ class User
     public function setName(string $name): static
     {
         $this->name = $name;
-
         return $this;
     }
+
+    /** TimeSlot getters / add / remove **/
+    public function getTimeSlots(): Collection
+    {
+        return $this->timeSlots;
+    }
+    public function addTimeSlot(TimeSlot $ts): static { /* … */ }
+    public function removeTimeSlot(TimeSlot $ts): static { /* … */ }
+
+    /** Patient appointments **/
+    public function getAppointments(): Collection
+    {
+        return $this->appointments;
+    }
+    public function addAppointment(Appointment $a): static { /* … */ }
+    public function removeAppointment(Appointment $a): static { /* … */ }
+
+    /** Doctor appointments **/
+    public function getDoctorAppointments(): Collection
+    {
+        return $this->doctorAppointments;
+    }
+    public function addDoctorAppointment(Appointment $a): static { /* … */ }
+    public function removeDoctorAppointment(Appointment $a): static { /* … */ }
+
+    /** Notifications **/
+    public function getNotifications(): Collection
+    {
+        return $this->notifications;
+    }
+    public function addNotification(Notification $n): static { /* … */ }
+    public function removeNotification(Notification $n): static { /* … */ }
 }
