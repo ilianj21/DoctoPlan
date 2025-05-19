@@ -1,16 +1,14 @@
 <?php
+// src/Repository/TimeSlotRepository.php
 
 namespace App\Repository;
 
 use App\Entity\TimeSlot;
 use App\Entity\User;
-use DateTimeInterface;
+use App\Entity\Appointment;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-/**
- * @extends ServiceEntityRepository<TimeSlot>
- */
 class TimeSlotRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -19,39 +17,36 @@ class TimeSlotRepository extends ServiceEntityRepository
     }
 
     /**
-     * Renvoie les créneaux du même médecin qui se chevauchent
+     * Retourne les créneaux du médecin qui se chevauchent avec l’intervalle donné.
      *
-     * @param User              $doctor
-     * @param DateTimeInterface $start
-     * @param DateTimeInterface $end
      * @return TimeSlot[]
      */
-    public function findOverlappingSlots(User $doctor, DateTimeInterface $start, DateTimeInterface $end): array
+    public function findOverlappingSlots(User $doctor, \DateTimeInterface $start, \DateTimeInterface $end): array
     {
         return $this->createQueryBuilder('t')
             ->andWhere('t.doctor = :doctor')
             ->andWhere('t.startAt < :end')
             ->andWhere('t.endAt   > :start')
             ->setParameter('doctor', $doctor)
-            ->setParameter('start', $start)
-            ->setParameter('end', $end)
+            ->setParameter('start',  $start)
+            ->setParameter('end',    $end)
             ->orderBy('t.startAt', 'ASC')
             ->getQuery()
             ->getResult();
     }
 
     /**
-     * Renvoie les créneaux libres (non réservés) pour un médecin
+     * Retourne les créneaux disponibles (non réservés) pour un médecin donné.
      *
-     * @param User $doctor
      * @return TimeSlot[]
      */
     public function findAvailableSlotsForDoctor(User $doctor): array
     {
         return $this->createQueryBuilder('t')
-            ->leftJoin('t.appointments', 'a')   // ou bien leftJoin(Appointment::class,'a','WITH','a.timeSlot = t')
+            // on joint l'entité Appointment, sans passer par une relation inverse
+            ->leftJoin(Appointment::class, 'a', 'WITH', 'a.timeSlot = t')
             ->andWhere('t.doctor = :doctor')
-            ->andWhere('a.id IS NULL')
+            ->andWhere('a.id IS NULL') // seuls les slots sans rendez-vous associé
             ->setParameter('doctor', $doctor)
             ->orderBy('t.startAt', 'ASC')
             ->getQuery()

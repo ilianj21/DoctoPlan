@@ -34,22 +34,23 @@ class AppointmentController extends AbstractController
     ): Response {
         $appointment = new Appointment();
 
-        // Récupérer les données soumises, sans provoquer l'erreur "non-scalar default"
-        $submitted = $request->request->get('appointment');
-        if (!\is_array($submitted)) {
-            $submitted = [];
-        }
+        // 1) On prend tout le POST en tableau
+        $all = $request->request->all();
+        // 2) On extrait la partie 'appointment' ou un tableau vide
+        $submitted = is_array($all['appointment'] ?? null) ? $all['appointment'] : [];
 
-        // Identifier le médecin sélectionné (pour pré-charger les créneaux)
+        // 3) On identifie l’id du médecin sélectionné
         $doctorId = $submitted['doctor'] ?? null;
         $doctor   = $doctorId ? $userRepo->find($doctorId) : null;
 
+        // 4) Création du formulaire en lui passant ce doctor
         $form = $this->createForm(AppointmentType::class, $appointment, [
             'doctor' => $doctor,
         ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // on persiste si timeSlot + status sont remplis
             if ($appointment->getTimeSlot() && $appointment->getStatus()) {
                 $em->persist($appointment);
                 $em->flush();
@@ -80,12 +81,11 @@ class AppointmentController extends AbstractController
         TimeSlotRepository $slotRepo,
         UserRepository $userRepo
     ): Response {
-        // Même logique pour récupérer le doctor si on re-soumet via onchange
-        $submitted = $request->request->get('appointment');
-        if (!\is_array($submitted)) {
-            $submitted = [];
-        }
+        // même logique : on prend tout le POST
+        $all = $request->request->all();
+        $submitted = is_array($all['appointment'] ?? null) ? $all['appointment'] : [];
 
+        // id du médecin (POST ou celui déjà lié)
         $doctorId = $submitted['doctor'] 
             ?? $appointment->getDoctor()?->getId();
         $doctor   = $doctorId ? $userRepo->find($doctorId) : null;
