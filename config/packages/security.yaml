@@ -35,7 +35,7 @@ security:
             # déconnexion
             logout:
                 path:   /logout
-                target: /
+                target: /login
 
     access_control:
         # pages publiques

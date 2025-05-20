@@ -74,6 +74,8 @@ class AppointmentController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_appointment_edit', methods: ['GET','POST'])]
+    #[Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_DOCTOR')")]
+
     public function edit(
         Request $request,
         Appointment $appointment,
