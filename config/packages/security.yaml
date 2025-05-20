@@ -29,6 +29,9 @@ security:
                 login_path:  /login
                 check_path:  /login
 
+                 # redirige vers /login après un succès d'authent
+                default_target_path: login
+                always_use_default_target_path: true
             # déconnexion
             logout:
                 path:   /logout
