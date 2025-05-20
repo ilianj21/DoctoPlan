@@ -1,8 +1,10 @@
+# config/packages/security.yaml
 security:
     enable_authenticator_manager: true
 
     password_hashers:
-        App\Entity\User: auto
+        App\Entity\User:
+            algorithm: auto
 
     providers:
         app_user_provider:
@@ -16,27 +18,31 @@ security:
             security: false
 
         main:
-            # attention : ceci n'est PAS un tableau !
-            provider: app_user_provider
+            # n'active le firewall qu'au besoin (nouveau comportement Symfony 6+)
             lazy: true
 
+            # provider singulier
+            provider: app_user_provider
+
+            # formulaire de connexion
             form_login:
-                login_path:        login
-                check_path:        login
-                username_parameter: _username
-                password_parameter: _password
-                csrf_parameter:     _csrf_token   # nom du champ _csrf_token dans votre form
-                csrf_token_id:      authenticate  # idem, pour le csrf_token() dans Twig
-                enable_csrf:        true
+                login_path:  /login
+                check_path:  /login
 
-                default_target_path:           app_appointment_index
+                 # redirige vers /login après un succès d'authent
+                default_target_path: login
                 always_use_default_target_path: true
-
+            # déconnexion
             logout:
-                path:   logout
-                target: login
+                path:   /logout
+                target: /login
 
     access_control:
-        - { path: ^/(login|register)$, roles: PUBLIC_ACCESS }
-        - { path: ^/appointment/\d+/edit$, roles: [ROLE_ADMIN, ROLE_DOCTOR] }
-        - { path: ^/, roles: ROLE_USER }
+        # 1) Seuls ADMIN et DOCTOR peuvent accéder à /appointment/{id}/edit
+        - { path: ^/appointment/\d+/edit$, roles: ['ROLE_ADMIN','ROLE_DOCTOR'] }
+
+        # 2) Pages publiques login & register
+        - { path: ^/(login|register)$, roles: [PUBLIC_ACCESS] }
+
+        # 3) Tout le reste du site requiert au minimum ROLE_USER
+        - { path: ^/, roles: ['ROLE_USER'] }
