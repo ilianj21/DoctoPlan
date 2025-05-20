@@ -33,6 +33,7 @@ class RegistrationController extends AbstractController
             $user->setPassword($hashed);
 
             // 2) ROLE_USER ajouté automatiquement par getRoles()
+            $user->setRoles(['ROLE_USER']);
 
             // 3) Persiste et flush
             $em->persist($user);
