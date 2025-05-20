@@ -29,6 +29,8 @@ security:
                 login_path:  /login
                 check_path:  /login
 
+                username_parameter: email
+                password_parameter: password
                  # redirige vers /login après un succès d'authent
                 default_target_path: login
                 always_use_default_target_path: true
@@ -38,9 +40,8 @@ security:
                 target: /login
 
     access_control:
-        # pages publiques
-        - { path: ^/login$,    roles: PUBLIC_ACCESS }
-        - { path: ^/register$, roles: PUBLIC_ACCESS }
+        # 1) login & register en accès public
+        - { path: ^/(login|register)$, roles: PUBLIC_ACCESS }
 
-        # tout le reste requiert ROLE_USER
-        - { path: ^/,          roles: ROLE_USER }
+        # 2) tout le reste du site requiert au minimum ROLE_USER
+        - { path: ^/,              roles: ROLE_USER }

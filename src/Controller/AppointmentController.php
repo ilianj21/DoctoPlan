@@ -83,6 +83,11 @@ class AppointmentController extends AbstractController
         TimeSlotRepository $slotRepo,
         UserRepository $userRepo
     ): Response {
+        // Si pas admin ni doctor, redirige vers la liste avec flash
+        if (! $this->isGranted('ROLE_ADMIN') && ! $this->isGranted('ROLE_DOCTOR')) {
+            $this->addFlash('warning', 'Vous n’êtes pas autorisé·e à modifier ce rendez-vous.');
+            return $this->redirectToRoute('app_appointment_index');
+        }
         // même logique : on prend tout le POST
         $all = $request->request->all();
         $submitted = is_array($all['appointment'] ?? null) ? $all['appointment'] : [];
