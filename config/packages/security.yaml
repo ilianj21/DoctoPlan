@@ -1,10 +1,8 @@
-# config/packages/security.yaml
 security:
     enable_authenticator_manager: true
 
     password_hashers:
-        App\Entity\User:
-            algorithm: auto
+        App\Entity\User: auto
 
     providers:
         app_user_provider:
@@ -18,30 +16,27 @@ security:
             security: false
 
         main:
-            # n'active le firewall qu'au besoin (nouveau comportement Symfony 6+)
+            # attention : ceci n'est PAS un tableau !
+            provider: app_user_provider
             lazy: true
 
-            # provider singulier
-            provider: app_user_provider
-
-            # formulaire de connexion
             form_login:
-                login_path:  /login
-                check_path:  /login
+                login_path:        login
+                check_path:        login
+                username_parameter: _username
+                password_parameter: _password
+                csrf_parameter:     _csrf_token   # nom du champ _csrf_token dans votre form
+                csrf_token_id:      authenticate  # idem, pour le csrf_token() dans Twig
+                enable_csrf:        true
 
-                username_parameter: email
-                password_parameter: password
-                 # redirige vers /login après un succès d'authent
-                default_target_path: login
+                default_target_path:           app_appointment_index
                 always_use_default_target_path: true
-            # déconnexion
+
             logout:
-                path:   /logout
-                target: /login
+                path:   logout
+                target: login
 
     access_control:
-        # 1) login & register en accès public
         - { path: ^/(login|register)$, roles: PUBLIC_ACCESS }
-
-        # 2) tout le reste du site requiert au minimum ROLE_USER
-        - { path: ^/,              roles: ROLE_USER }
+        - { path: ^/appointment/\d+/edit$, roles: [ROLE_ADMIN, ROLE_DOCTOR] }
+        - { path: ^/, roles: ROLE_USER }
