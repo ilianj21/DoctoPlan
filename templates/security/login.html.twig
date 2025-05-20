@@ -1,26 +1,44 @@
+{# templates/security/login.html.twig #}
 {% extends 'base.html.twig' %}
-
 {% block title %}Connexion{% endblock %}
 
 {% block body %}
   <h1>Connexion</h1>
 
   {% if error %}
-    <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+    <div class="alert alert-danger">
+      {{ error.messageKey|trans(error.messageData, 'security') }}
+    </div>
   {% endif %}
 
   <form action="{{ path('login') }}" method="post">
+    {# CSRF token requis par le FormLoginAuthenticator #}
+    <input type="hidden" name="_csrf_token"
+           value="{{ csrf_token('authenticate') }}"/>
+
     <div class="mb-3">
       <label for="username">Email</label>
-      <input type="email" name="_username" id="username"
-             class="form-control"
-             value="{{ last_username }}" required autofocus>
+      <input
+        type="email"
+        id="username"
+        name="_username"         {# champ attendu par défaut #}
+        class="form-control"
+        value="{{ last_username }}"
+        required autofocus
+      />
     </div>
+
     <div class="mb-3">
       <label for="password">Mot de passe</label>
-      <input type="password" name="_password" id="password"
-             class="form-control" required>
+      <input
+        type="password"
+        id="password"
+        name="_password"         {# champ attendu par défaut #}
+        class="form-control"
+        required
+      />
     </div>
+
     <button class="btn btn-primary">Se connecter</button>
   </form>
 

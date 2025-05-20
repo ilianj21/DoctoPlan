@@ -1,5 +1,7 @@
 # config/packages/security.yaml
 security:
+    enable_authenticator_manager: true
+
     password_hashers:
         App\Entity\User:
             algorithm: auto
@@ -16,22 +18,26 @@ security:
             security: false
 
         main:
-            # lazy‐loading du token
+            # n'active le firewall qu'au besoin (nouveau comportement Symfony 6+)
             lazy: true
 
-            # provider (singulier !) correctement indenté sous main
+            # provider singulier
             provider: app_user_provider
 
+            # formulaire de connexion
             form_login:
-                login_path: login
-                check_path: login
-                default_target_path: app_appointment_index
+                login_path:  /login
+                check_path:  /login
 
+            # déconnexion
             logout:
-                path: logout
-                target: login
+                path:   /logout
+                target: /
 
     access_control:
-        - { path: ^/login$,    roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/register$, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        # pages publiques
+        - { path: ^/login$,    roles: PUBLIC_ACCESS }
+        - { path: ^/register$, roles: PUBLIC_ACCESS }
+
+        # tout le reste requiert ROLE_USER
         - { path: ^/,          roles: ROLE_USER }
