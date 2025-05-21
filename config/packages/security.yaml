@@ -1,48 +1,35 @@
-# config/packages/security.yaml
 security:
-    enable_authenticator_manager: true
-
-    password_hashers:
+    encoders:
         App\Entity\User:
-            algorithm: auto
+            algorithm: auto    # utilise l'algorithme de hashage le plus robuste automatiquement:contentReference[oaicite:6]{index=6}
 
     providers:
         app_user_provider:
             entity:
                 class: App\Entity\User
-                property: email
+                property: email  # on charge l'utilisateur via son email:contentReference[oaicite:7]{index=7}
 
     firewalls:
+        # Firewall dev (Symfony profiler, etc.)
         dev:
-            pattern: ^/_(profiler|wdt)
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
 
+        # Firewall principal
         main:
-            # n'active le firewall qu'au besoin (nouveau comportement Symfony 6+)
-            lazy: true
-
-            # provider singulier
-            provider: app_user_provider
-
-            # formulaire de connexion
+            anonymous: true              # permet aux non-connectés d'accéder aux pages publiques
+            provider: app_user_provider  # utilise le provider déclaré ci-dessus
             form_login:
-                login_path:  /login
-                check_path:  /login
-
-                 # redirige vers /login après un succès d'authent
-                default_target_path: login
-                always_use_default_target_path: true
-            # déconnexion
+                login_path: app_login    # route name pour afficher le formulaire de login
+                check_path: app_login    # route name identique pour traiter le login (POST)
+                username_parameter: email    # nom du champ email dans le form de login:contentReference[oaicite:8]{index=8}
+                password_parameter: password # nom du champ mot de passe (par défaut "password")
+                default_target_path: app_home # page de destination après succès (exemple)
+                enable_csrf: true        # protection CSRF du formulaire (recommandé)
             logout:
-                path:   /logout
-                target: /login
+                path: app_logout         # route de déconnexion (assurez-vous qu’elle existe)
 
     access_control:
-        # 1) Seuls ADMIN et DOCTOR peuvent accéder à /appointment/{id}/edit
-        - { path: ^/appointment/\d+/edit$, roles: ['ROLE_ADMIN','ROLE_DOCTOR'] }
-
-        # 2) Pages publiques login & register
-        - { path: ^/(login|register)$, roles: [PUBLIC_ACCESS] }
-
-        # 3) Tout le reste du site requiert au minimum ROLE_USER
-        - { path: ^/, roles: ['ROLE_USER'] }
+        - { path: ^/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/register, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/, roles: IS_AUTHENTICATED_FULLY }  # tout le reste nécessite d'être connecté

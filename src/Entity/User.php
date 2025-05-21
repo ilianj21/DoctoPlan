@@ -37,6 +37,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\NotBlank(message: 'Le nom est obligatoire.')]
     private ?string $name = null;
 
+    
     /**
      * @var Collection<int, TimeSlot>
      */
@@ -96,22 +97,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @deprecated since Symfony 5.3, use getUserIdentifier()
      */
-    public function getUsername(): string
+    public function getUsername(): string 
     {
-        return $this->getUserIdentifier();
+        return $this->email;  // utilisation de l'email comme identifiant:contentReference[oaicite:17]{index=17}
     }
 
     /**
      * @see UserInterface
      */
-    public function getRoles(): array
+     public function getRoles(): array 
     {
         $roles = $this->roles;
-        // garantit au moins ROLE_USER
-        if (!in_array('ROLE_USER', $roles, true)) {
-            $roles[] = 'ROLE_USER';
-        }
-        return $roles;
+        $roles[] = 'ROLE_USER';         // garantit au moins ROLE_USER:contentReference[oaicite:18]{index=18}
+        return array_unique($roles);
     }
 
     public function setRoles(array $roles): static
@@ -120,12 +118,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+     public function getSalt(): ?string 
+    {
+        return null; // pas nécessaire avec bcrypt/argon2i (hash moderne):contentReference[oaicite:19]{index=19}
+    }
+    
     /**
      * @see PasswordAuthenticatedUserInterface
      */
-    public function getPassword(): string
+    public function getPassword(): string 
     {
-        return (string) $this->password;
+        return $this->password;
     }
 
     public function setPassword(string $password): static
@@ -152,7 +155,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->name = $name;
         return $this;
     }
-
+    
     /** TimeSlot getters / add / remove **/
     public function getTimeSlots(): Collection
     {
