@@ -1,44 +1,41 @@
-# config/packages/security.yaml
 security:
-    enable_authenticator_manager: true   # Active le nouveau système d'authentification de Symfony 5.1:contentReference[oaicite:1]{index=1}
+    enable_authenticator_manager: true
+
     password_hashers:
         App\Entity\User:
-            algorithm: auto             # Remplace "encoders" par "password_hashers" avec un algorithme sécurisé par défaut:contentReference[oaicite:2]{index=2}:contentReference[oaicite:3]{index=3}
+            algorithm: auto
 
     providers:
         app_user_provider:
             entity:
                 class: App\Entity\User
-                property: email         # Utilise l'email de l'entité User comme identifiant de connexion:contentReference[oaicite:4]{index=4}
+                property: email
 
     firewalls:
-        # Firewall de dev (outils Symfony) – inchangé
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
 
-        # Firewall principal
         main:
-            lazy: true                 # Remplace "anonymous: true" par "lazy: true" (autorise l'accès anonyme sans ouvrir de session):contentReference[oaicite:5]{index=5}:contentReference[oaicite:6]{index=6}
+            lazy: true
             provider: app_user_provider
+
             form_login:
-                login_path: app_login            # Route du formulaire de login (GET)
-                check_path: app_login            # Même route utilisée pour la soumission (POST):contentReference[oaicite:7]{index=7}
-                username_parameter: _username    # Nom du champ utilisateur attendu (par défaut "_username"):contentReference[oaicite:8]{index=8}
-                password_parameter: _password    # Nom du champ mot de passe attendu (par défaut "_password"):contentReference[oaicite:9]{index=9}
-                enable_csrf: true               # Active la protection CSRF (remplace l'ancienne config de générateur de token)【13†】
-                csrf_token_id: authenticate     # ID du token CSRF, doit correspondre à celui utilisé dans le formulaire (par défaut "authenticate")
-                default_target_path: app_appointment_index      # Route vers laquelle l’utilisateur est redirigé après login:contentReference[oaicite:10]{index=10}
-                always_use_default_target_path: true            # Force la redirection vers default_target_path à chaque connexion:contentReference[oaicite:11]{index=11}
-            remember_me:
-                secret: '%kernel.secret%'       # Active la fonctionnalité "Se souvenir de moi" (cookie sécurisé) avec le secret de l'application
+                login_path: app_login
+                check_path: app_login
+                username_parameter: _username
+                password_parameter: _password
+                enable_csrf: true
+                csrf_token_id: authenticate
+                default_target_path: app_appointment_index
+                always_use_default_target_path: true
+
             logout:
-                path: app_logout                # Route de déconnexion (gérée automatiquement par Symfony)
-                target: app_login               # (Optionnel) Redirige vers la page de login après déconnexion
+                path: app_logout
+                target: app_login
 
     access_control:
-        # Autorise l’accès public aux routes de login et d’inscription
-        - { path: '^/(login|register)$', roles: PUBLIC_ACCESS } 
-        # Restreint l’accès aux autres pages (exemples)
-        - { path: '^/admin', roles: ROLE_ADMIN }
-        - { path: '^/', roles: ROLE_USER }
+        - { path: ^/login$, roles: PUBLIC_ACCESS }
+        - { path: ^/register$, roles: PUBLIC_ACCESS }
+        - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/, roles: ROLE_USER }
