@@ -1,35 +1,44 @@
+# config/packages/security.yaml
 security:
-    encoders:
+    enable_authenticator_manager: true   # Active le nouveau système d'authentification de Symfony 5.1:contentReference[oaicite:1]{index=1}
+    password_hashers:
         App\Entity\User:
-            algorithm: auto    # utilise l'algorithme de hashage le plus robuste automatiquement:contentReference[oaicite:6]{index=6}
+            algorithm: auto             # Remplace "encoders" par "password_hashers" avec un algorithme sécurisé par défaut:contentReference[oaicite:2]{index=2}:contentReference[oaicite:3]{index=3}
 
     providers:
         app_user_provider:
             entity:
                 class: App\Entity\User
-                property: email  # on charge l'utilisateur via son email:contentReference[oaicite:7]{index=7}
+                property: email         # Utilise l'email de l'entité User comme identifiant de connexion:contentReference[oaicite:4]{index=4}
 
     firewalls:
-        # Firewall dev (Symfony profiler, etc.)
+        # Firewall de dev (outils Symfony) – inchangé
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
 
         # Firewall principal
         main:
-            anonymous: true              # permet aux non-connectés d'accéder aux pages publiques
-            provider: app_user_provider  # utilise le provider déclaré ci-dessus
+            lazy: true                 # Remplace "anonymous: true" par "lazy: true" (autorise l'accès anonyme sans ouvrir de session):contentReference[oaicite:5]{index=5}:contentReference[oaicite:6]{index=6}
+            provider: app_user_provider
             form_login:
-                login_path: app_login    # route name pour afficher le formulaire de login
-                check_path: app_login    # route name identique pour traiter le login (POST)
-                username_parameter: email    # nom du champ email dans le form de login:contentReference[oaicite:8]{index=8}
-                password_parameter: password # nom du champ mot de passe (par défaut "password")
-                default_target_path: app_home # page de destination après succès (exemple)
-                enable_csrf: true        # protection CSRF du formulaire (recommandé)
+                login_path: app_login            # Route du formulaire de login (GET)
+                check_path: app_login            # Même route utilisée pour la soumission (POST):contentReference[oaicite:7]{index=7}
+                username_parameter: _username    # Nom du champ utilisateur attendu (par défaut "_username"):contentReference[oaicite:8]{index=8}
+                password_parameter: _password    # Nom du champ mot de passe attendu (par défaut "_password"):contentReference[oaicite:9]{index=9}
+                enable_csrf: true               # Active la protection CSRF (remplace l'ancienne config de générateur de token)【13†】
+                csrf_token_id: authenticate     # ID du token CSRF, doit correspondre à celui utilisé dans le formulaire (par défaut "authenticate")
+                default_target_path: app_appointment_index      # Route vers laquelle l’utilisateur est redirigé après login:contentReference[oaicite:10]{index=10}
+                always_use_default_target_path: true            # Force la redirection vers default_target_path à chaque connexion:contentReference[oaicite:11]{index=11}
+            remember_me:
+                secret: '%kernel.secret%'       # Active la fonctionnalité "Se souvenir de moi" (cookie sécurisé) avec le secret de l'application
             logout:
-                path: app_logout         # route de déconnexion (assurez-vous qu’elle existe)
+                path: app_logout                # Route de déconnexion (gérée automatiquement par Symfony)
+                target: app_login               # (Optionnel) Redirige vers la page de login après déconnexion
 
     access_control:
-        - { path: ^/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/register, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/, roles: IS_AUTHENTICATED_FULLY }  # tout le reste nécessite d'être connecté
+        # Autorise l’accès public aux routes de login et d’inscription
+        - { path: '^/(login|register)$', roles: PUBLIC_ACCESS } 
+        # Restreint l’accès aux autres pages (exemples)
+        - { path: '^/admin', roles: ROLE_ADMIN }
+        - { path: '^/', roles: ROLE_USER }

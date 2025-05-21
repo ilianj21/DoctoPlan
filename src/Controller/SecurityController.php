@@ -4,29 +4,33 @@ namespace App\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
 class SecurityController extends AbstractController
 {
-    #[Route(path: '/login', name: 'login')]
-    public function login(AuthenticationUtils $authUtils): Response
+    #[Route('/login', name: 'login')]
+    public function login(AuthenticationUtils $authenticationUtils): Response
     {
-        // s’il y a déjà un utilisateur connecté, on le redirige
+        // Redirige l’utilisateur déjà connecté vers la page d’accueil
         if ($this->getUser()) {
             return $this->redirectToRoute('app_appointment_index');
         }
 
+        // Récupère le dernier identifiant saisi et l’erreur éventuelle
+        $lastUsername = $authenticationUtils->getLastUsername();
+        $error = $authenticationUtils->getLastAuthenticationError();
+
         return $this->render('security/login.html.twig', [
-            'last_username' => $authUtils->getLastUsername(),
-            'error'         => $authUtils->getLastAuthenticationError(),
+            'last_username' => $lastUsername,
+            'error' => $error,
         ]);
     }
 
-    #[Route(path: '/logout', name: 'logout')]
+    #[Route('/logout', name: 'logout')]
     public function logout(): void
     {
-        // Symfony gère la déconnexion, pas besoin de code ici
-        throw new \LogicException('This method can be blank – it will be intercepted by the logout key on your firewall.');
+        // Cette méthode peut rester vide, Symfony intercepte la route pour gérer la déconnexion
+        throw new \LogicException('Cette méthode peut rester vide - elle sera interceptée par le firewall.');
     }
 }
