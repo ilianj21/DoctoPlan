@@ -21,8 +21,8 @@ security:
             provider: app_user_provider
 
             form_login:
-                login_path: app_login
-                check_path: app_login
+                login_path: login
+                check_path: login
                 username_parameter: _username
                 password_parameter: _password
                 enable_csrf: true
@@ -31,8 +31,8 @@ security:
                 always_use_default_target_path: true
 
             logout:
-                path: app_logout
-                target: app_login
+                path: logout
+                target: login
 
     access_control:
         - { path: ^/login$, roles: PUBLIC_ACCESS }
