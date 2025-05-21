@@ -72,11 +72,12 @@ final class UserController extends AbstractController
             $em->flush();
             $this->addFlash('success', 'Utilisateur mis à jour avec succès.');
 
-            return $this->redirectToRoute('app_user_list');
+            return $this->redirectToRoute('app_user_index');
         }
 
         return $this->render('user/edit.html.twig', [
             'form' => $form->createView(),
+            'user' => $user,
         ]);
     
     }
