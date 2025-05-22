@@ -24,9 +24,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\Email(message: 'L’email "{{ value }}" n’est pas valide.')]
     private ?string $email = null;
 
-    /**
-     * @var string The hashed password
-     */
     #[ORM\Column]
     private ?string $password = null;
 
@@ -56,18 +53,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Appointment::class, mappedBy: 'doctor')]
     private Collection $doctorAppointments;
 
-    /**
-     * @var Collection<int, Notification>
-     */
-    #[ORM\OneToMany(targetEntity: Notification::class, mappedBy: 'user')]
-    private Collection $notifications;
 
     public function __construct()
     {
         $this->timeSlots          = new ArrayCollection();
         $this->appointments       = new ArrayCollection();
         $this->doctorAppointments = new ArrayCollection();
-        $this->notifications      = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -86,29 +77,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * A visual identifier that represents this user.
-     */
+
     public function getUserIdentifier(): string
     {
         return (string) $this->email;
     }
 
-    /**
-     * @deprecated since Symfony 5.3, use getUserIdentifier()
-     */
+    
     public function getUsername(): string 
     {
-        return $this->email;  // utilisation de l'email comme identifiant:contentReference[oaicite:17]{index=17}
+        return $this->email;  
     }
 
-    /**
-     * @see UserInterface
-     */
+
      public function getRoles(): array 
     {
         $roles = $this->roles;
-        $roles[] = 'ROLE_USER';         // garantit au moins ROLE_USER:contentReference[oaicite:18]{index=18}
+        $roles[] = 'ROLE_USER';         
         return array_unique($roles);
     }
 
@@ -120,12 +105,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
      public function getSalt(): ?string 
     {
-        return null; // pas nécessaire avec bcrypt/argon2i (hash moderne):contentReference[oaicite:19]{index=19}
+        return null;
     }
-    
-    /**
-     * @see PasswordAuthenticatedUserInterface
-     */
+
     public function getPassword(): string 
     {
         return $this->password;
@@ -137,14 +119,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @see UserInterface
-     */
-    public function eraseCredentials(): void
+   public function eraseCredentials(): void
     {
-        // si vous stockez un plainPassword, effacez-le ici
+        $this->plainPassword = null;
     }
-
+    
     public function getName(): ?string
     {
         return $this->name;
@@ -156,7 +135,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
     
-    /** TimeSlot getters / add / remove **/
     public function getTimeSlots(): Collection
     {
         return $this->timeSlots;
@@ -164,7 +142,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function addTimeSlot(TimeSlot $ts): static { /* … */ }
     public function removeTimeSlot(TimeSlot $ts): static { /* … */ }
 
-    /** Patient appointments **/
     public function getAppointments(): Collection
     {
         return $this->appointments;
@@ -172,7 +149,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function addAppointment(Appointment $a): static { /* … */ }
     public function removeAppointment(Appointment $a): static { /* … */ }
 
-    /** Doctor appointments **/
     public function getDoctorAppointments(): Collection
     {
         return $this->doctorAppointments;
@@ -180,11 +156,5 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function addDoctorAppointment(Appointment $a): static { /* … */ }
     public function removeDoctorAppointment(Appointment $a): static { /* … */ }
 
-    /** Notifications **/
-    public function getNotifications(): Collection
-    {
-        return $this->notifications;
-    }
-    public function addNotification(Notification $n): static { /* … */ }
-    public function removeNotification(Notification $n): static { /* … */ }
+    
 }
