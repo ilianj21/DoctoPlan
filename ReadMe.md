@@ -45,7 +45,7 @@ Lien : http://127.0.0.1:8000/appointment/
 Pour acceder au user : 
 http://127.0.0.1:8000/user/
 Compte de test : 
-- user -> ilianjean@gmail.com - MDP : ilianjean
+- user -> ilianjean@gmail.com - MDP : 123456
 - doc-> doc@gmail.com - MDP : 123456
 - admin-> admin@admin.com - MDP : administrateur
 
